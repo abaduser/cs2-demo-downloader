@@ -75,7 +75,7 @@ def scrape_match(community_id, tab):
     recent_matches = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context(user_agent=wa.session.headers["User-Agent"])
         logging.info("Setting cookies from SteamAuth...")
         context.add_cookies(extract_cookies(wa.session.cookies))
@@ -137,7 +137,8 @@ def scrape_match(community_id, tab):
                     extracted_match_info = [
                         info.get_text(strip=True) for info in map_table.find_all("td")
                     ]
-                    extracted_match_info = extracted_match_info[:-1]
+                    if len(extracted_match_info) > 5:
+                        extracted_match_info = extracted_match_info[:-1]
                     match_info = {
                         "map": extracted_match_info[0],
                         "date": extracted_match_info[1],

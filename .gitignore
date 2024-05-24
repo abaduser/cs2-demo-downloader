@@ -1,6 +1,7 @@
 todo.md
 demos/*
 wa.pickle
+cache.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -36,6 +36,9 @@ def prompt_empty_community_id():
     )
     return extract_community_id(custom_url)
 
+def poll_scraper(community_id, match_types):
+    for type in match_types:
+        match_scraper.download_matches(community_id, type)
 
 def main():
     if not os.path.exists(SETTINGS_FILE):
@@ -52,8 +55,7 @@ def main():
     print("[CS2 DEMO DOWNLOADER]")
     print("------------------------------------")
     match_scraper.authenticate()
-    for match_types in settings["match_types_to_download"]:
-        match_scraper.download_matches(settings["community_id"], match_types)
+    poll_scraper(settings['community_id'], settings['match_types_to_download'])
 
 
 if __name__ == "__main__":

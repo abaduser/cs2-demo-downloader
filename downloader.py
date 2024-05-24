@@ -73,7 +73,7 @@ def download_file(session, url, metadata, destination_folder):
     response.raise_for_status()
 
     filename = get_filename_from_url(url)
-    folderpath = os.path.join(os.getcwd(), destination_folder)
+    folderpath = os.path.join(os.getcwd(), "demos/" + destination_folder)
     ensure_dir(folderpath)
     filepath = os.path.join(folderpath, filename)
 
