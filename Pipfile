@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+beautifulsoup4 = "*"
+requests = "*"
+click = "*"
+steam = {git = "git+https://github.com/FailSpy/steam-py-lib"}
+black = "*"
+pytest-playwright = "*"
+tqdm = "*"
+toml = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
