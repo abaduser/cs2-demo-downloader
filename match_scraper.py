@@ -8,39 +8,51 @@ from pathlib import Path
 from downloader import url_downloader
 from time import sleep
 
+from pathlib import Path
+
 logger = logging.getLogger("web_scraper")
 logging.basicConfig(level=logging.INFO)
 PICKLE_PATH = Path("wa.pickle")
 
 
-def download_matches(community_id, tab):
-    global wa
+def poll_scraper(community_id, match_types, webauth):
+    for match_type in match_types:
+        download_matches(community_id, match_type, webauth)
+
+
+def download_matches(community_id, tab, webauth):
     recent_matches, folder = scrape_match(community_id, tab)
     recent_match_urls = list(filter(None, [match["url"] for match in recent_matches]))
-    url_downloader(wa.session, recent_match_urls, folder)
+    url_downloader(webauth.session, recent_match_urls, folder)
 
+
+def load_webauth_pickle(path):
+    logging.info(f"Loading an existing pickle from {path}")
+    return pickle.loads(open(path, "rb").read())
+
+def create_webauth_pickle(path):
+    logging.info("Authentication required from Steam.")
+    logging.warning("Storing session on disk!")
+    username = input("Steam Username: ")
+    webauth = steam_auth.WebAuth()
+    webauth.cli_login(username, input(f"Password for {username}: "))
+    try:
+        with open(path, "wb") as f:
+            f.write(pickle.dumps(webauth))
+        logging.info(f"Pickled the session to {path}.")
+    except pickle.PicklingError:
+        logging.error("Failed to pickle the session!")
+        logging.warn("Session was not pickled!")
+    return webauth
 
 def authenticate(ForceAuth=False):
-    global wa
-    if PICKLE_PATH.exists() and not ForceAuth:
-        wa = pickle.loads(open(PICKLE_PATH, "rb").read())
+    webauth_pickle_path = Path("webauth.pickle")
 
-        logging.info(f"Loaded existing pickle from {PICKLE_PATH}")
+    if webauth_pickle_path.exists() and not ForceAuth:
+        webauth = load_webauth_pickle(webauth_pickle_path)
     else:
-        logging.info("Authentication required from Steam.")
-        logging.warning("Storing session on disk.")
-
-        username = input("Steam Username: ")
-        wa = steam_auth.WebAuth()
-        wa.cli_login(username, input(f"Password for {username}: "))
-
-        try:
-            with open(PICKLE_PATH, "wb") as f:
-                f.write(pickle.dumps(wa))
-            logging.info(f"Pickled the session to {PICKLE_PATH}.")
-        except pickle.PicklingError:
-            logging.error("Failed to pickle the session!")
-            logging.warn("Session was not pickled!")
+        webauth = create_webauth_pickle(webauth_pickle_path)
+    return webauth
 
 
 def extract_cookies(request_cookies):
@@ -213,8 +225,3 @@ def match_table_empty(page):
         return True
     logging.info("match_table not empty!")
     return False
-
-
-# authenticate()
-if __name__ == "__main__":
-    main()
