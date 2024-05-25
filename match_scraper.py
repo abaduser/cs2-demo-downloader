@@ -81,7 +81,6 @@ def goto_personal_data(page, url):
         authenticate(True)
         page.goto(gcpd_url)
         if "Personal Game Data" not in page.title():
-            logging.error("Couldn't auth. Aborting webscraper!")
             # CATASTROPHIC FAILURE HAS OCCURRED!
             # We should handle this in some nice, Windows service-y way.
             return False
@@ -124,7 +123,7 @@ def parse_map_info(match):
     map_info = [info.get_text(strip=True) for info in map_table.find_all("td")]
     if len(map_info) > 5:
         extracted_match_info = extracted_match_info[:-1]
-    return map_info
+    return map_info, downloadUrl
 
 
 def parse_player_info(match):
@@ -174,6 +173,7 @@ def scrape_match(tab, webauth):
         # "/my" is an alias for "/id/<community_id"
         gcpd_url = f"https://steamcommunity.com/my/gcpd/730/?tab=matchhistory{tab}"
         if not goto_personal_data(page, gcpd_url):
+            logging.error("Unable to go to the personal data page!")
             return None
         match_table = fetch_match_table(page)
         context.close()
@@ -185,6 +185,7 @@ def scrape_match(tab, webauth):
 
     logging.info("Found csgo_scoreboard_root...")
     matches = match_table.find_all("tr", style=re.compile("display: table-row;"))
+
     if not matches:
         logging.error("Unable to find any matches!")
         return None
@@ -194,6 +195,7 @@ def scrape_match(tab, webauth):
         # map_info : Map, Date, Ranked, Wait Time, Match duration, Match Score
         # Players (Player : Stats)
         players_info = {}
+        match_info = {}
         # Player (Name) : Ping, Kills, Assists, Deaths, MVPs, HSP, Score
         downloadURL = ""
 
@@ -203,7 +205,7 @@ def scrape_match(tab, webauth):
         )
         if map_table:
             logging.info("Found map table...")
-            map_info = parse_map_info(match)
+            map_info, downloadURL = parse_map_info(match)
             match_info = {
                 "map": map_info[0],
                 "date": map_info[1],
