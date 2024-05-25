@@ -5,7 +5,7 @@ import re
 
 SETTINGS_FILE = "settings.toml"
 SETTINGS_TEMPLATE = {
-    "Settings": {"community_id": "", "match_types_to_download": ["premier"], "download_behavior": "periodic", "downloadInterval": "daily"},
+    "Settings": {"community_id": "", "match_types_to_download": ["premier"], "download_behavior": "periodic", "download_interval": "daily", "download_location": "", "download_"},
 }
 
 
