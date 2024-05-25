@@ -1,7 +1,6 @@
 import match_scraper as match_scraper
 import toml
 import os
-import re
 
 SETTINGS_FILE = "settings.toml"
 SETTINGS_TEMPLATE = {
@@ -14,16 +13,6 @@ SETTINGS_TEMPLATE = {
     },
 }
 
-
-def extract_community_id(partial_url):
-    if "id/" in partial_url:
-        url_match = re.search(r"id/([^/]+)", partial_url)
-        if url_match:
-            return url_match.group(1)
-    else:
-        return partial_url
-
-
 def generate_new_settings():
     # TODO: come up with a better way of setting this up to expand with more settings in the future, not as hardcoded.
     setting_comments = [
@@ -32,20 +21,10 @@ def generate_new_settings():
         "# Intervals available are daily / hourly",
     ]
     new_settings = SETTINGS_TEMPLATE
-    new_settings["Settings"]["community_id"] = prompt_empty_community_id()
     toml_string = toml.dumps(new_settings)
     toml_dissected = toml_string.split("\n")
     toml_dissected.insert(2, setting_comments[0])
     return toml_dissected
-
-
-def prompt_empty_community_id():
-    custom_url = input(
-        "Community id not set, please enter your custom URL for your account (id/<YourCustomURL>) : "
-    )
-    return extract_community_id(custom_url)
-
-
 
 
 def main():
@@ -63,7 +42,7 @@ def main():
     print("[CS2 DEMO DOWNLOADER]")
     print("------------------------------------")
     webauth = match_scraper.authenticate()
-    match_scraper.poll_scraper(settings["community_id"], settings["match_types_to_download"], webauth)
+    match_scraper.poll_scraper(settings["match_types_to_download"], webauth)
 
 
 if __name__ == "__main__":

@@ -15,13 +15,13 @@ logging.basicConfig(level=logging.INFO)
 PICKLE_PATH = Path("wa.pickle")
 
 
-def poll_scraper(community_id, match_types, webauth):
+def poll_scraper(match_types, webauth):
     for match_type in match_types:
-        download_matches(community_id, match_type, webauth)
+        download_matches(match_type, webauth)
 
 
-def download_matches(community_id, tab, webauth):
-    recent_matches, folder = scrape_match(community_id, tab)
+def download_matches(tab, webauth):
+    recent_matches, folder = scrape_match(tab, webauth)
     recent_match_urls = list(filter(None, [match["url"] for match in recent_matches]))
     url_downloader(webauth.session, recent_match_urls, folder)
 
@@ -71,52 +71,64 @@ def extract_cookies(request_cookies):
     return playwright_cookies
 
 
-def scrape_match(community_id, tab):
-    global wa
-    if wa.logged_on:
-        logging.info(f"Fetching 'Matches' for {community_id}...")
-        logging.info(f"Using access token: {wa.access_token}...")
-        logging.info(f"Client ID: {wa.client_id}\tRequest ID: {wa.request_id}")
-        logging.info(f"Refresh token: {wa.refresh_token}")
-        logging.info(f"Session ID: {wa.session_id}")
-    else:
-        logging.warning("Not logged in")
-        return False
+def goto_personal_data(page, url):
+    page.goto(gcpd_url)
 
+    if "Personal Game Data" not in page.title():
+        logging.error("Can't get to Personal Game Data page")
+        authenticate(True)
+        page.goto(gcpd_url)
+        if "Personal Game Data" not in page.title():
+            logging.error("Couldn't auth. Aborting webscraper!")
+            # CATASTROPHIC FAILURE HAS OCCURRED! 
+            # We should handle this in some nice, Windows service-y way.
+            return False
+    return True
+    
+
+def match_table_empty(page):
+    table_locator = page.locator("table.generic_kv_table.csgo_scoreboard_root tbody tr")
+
+    row_count = table_locator.count()
+
+    if row_count == 0 or (
+        row_count == 1 and table_locator.first.locator("th").count() > 0
+    ):
+        logging.info("match_table empty")
+        return True
+    logging.info("match_table not empty!")
+    return False
+
+
+def fetch_match_table(page):
+    # logic for checking if theres a load more button as the only item
+    # while we find no match elements on the page, click load more.
+    while match_table_empty(page):
+        page.locator("#load_more_clickable").click()
+    page_soup = BeautifulSoup(page.content(), "html.parser")
+    match_table = page_soup.find("table", class_="csgo_scoreboard_root")
+    return match_table 
+
+
+def scrape_match(tab, webauth):
     page_soup = None
     recent_matches = []
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(user_agent=wa.session.headers["User-Agent"])
+        context = browser.new_context(user_agent=webauth.session.headers["User-Agent"])
         logging.info("Setting cookies from SteamAuth...")
-        context.add_cookies(extract_cookies(wa.session.cookies))
+        cookies = extract_cookies(webauth.session.cookies)
+        context.add_cookies(cookies)
 
         page = context.new_page()
-        gcpd_url = f"https://steamcommunity.com/id/{community_id}/gcpd/730/?tab=matchhistory{tab}"
-        page.goto(gcpd_url)
-
-        if "Personal Game Data" not in page.title():
-            logging.warning("Issue with Auth, can't get to Personal Game Data page")
-            authenticate(True)
-            page.goto(gcpd_url)
-            if "Personal Game Data" not in page.title():
-                logging.warning("Couldn't auth. Aborting webscraper...")
-
-        # logic for checking if theres a load more button as the only item
-        # true => press button, loop
-        # false => collect the 16 matches on the page. (TODO: maybe pass an arg of the last match collected, so we can continue until we reach it.)
-
-        while match_table_empty(page):
-            page.locator("#load_more_clickable").click()
-
-        page_soup = BeautifulSoup(page.content(), "html.parser")
-
+        # "/my" is an alias for "/id/<community_id"
+        gcpd_url = f"https://steamcommunity.com/my/gcpd/730/?tab=matchhistory{tab}"
+        if not goto_personal_data(page, gcpd_url):
+            return None
+        match_table = fetch_match_table(page)
         context.close()
         browser.close()
-
-    # use soup to pull all matches
-    match_table = page_soup.find("table", class_="csgo_scoreboard_root")
 
     if match_table:
         logging.info("Found csgo_scoreboard_root...")
@@ -213,15 +225,3 @@ def scrape_match(community_id, tab):
     return recent_matches, tab
 
 
-def match_table_empty(page):
-    table_locator = page.locator("table.generic_kv_table.csgo_scoreboard_root tbody tr")
-
-    row_count = table_locator.count()
-
-    if row_count == 0 or (
-        row_count == 1 and table_locator.first.locator("th").count() > 0
-    ):
-        logging.info("match_table empty")
-        return True
-    logging.info("match_table not empty!")
-    return False
