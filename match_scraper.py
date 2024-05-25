@@ -2,7 +2,6 @@ import logging
 import pickle
 import re
 from pathlib import Path
-from time import sleep
 
 import steam.webauth as steam_auth
 from bs4 import BeautifulSoup
@@ -108,7 +107,7 @@ def fetch_match_table(page):
     return match_table
 
 
-def parse_map_info(match):
+def parse_map_info(map_table):
     downloadbutton = map_table.find("td", class_="csgo_scoreboard_cell_noborder")
     if downloadbutton:
         a = downloadbutton.find("a")
@@ -118,10 +117,10 @@ def parse_map_info(match):
     map_info = [info.get_text(strip=True) for info in map_table.find_all("td")]
     if len(map_info) > 5:
         extracted_match_info = extracted_match_info[:-1]
-    return map_info, downloadUrl
+    return map_info, downloadURL
 
 
-def parse_player_info(match):
+def parse_player_info(player_table):
     # do the score while we have the players_table
     score = player_table.find("td", class_="csgo_scoreboard_score").get_text(strip=True)
 
@@ -154,7 +153,6 @@ def parse_player_info(match):
 
 
 def scrape_matches(tab, webauth):
-    page_soup = None
     recent_matches = []
 
     # Look to move this into fetch_match_table
@@ -201,7 +199,7 @@ def scrape_matches(tab, webauth):
         )
         if map_table:
             logging.info("Found map table...")
-            map_info, downloadURL = parse_map_info(match)
+            map_info, downloadURL = parse_map_info(map_table)
             match_info = {
                 "map": map_info[0],
                 "date": map_info[1],
@@ -217,7 +215,7 @@ def scrape_matches(tab, webauth):
         )
         if player_table:
             logging.info("Found player_table...")
-            match_info["match_score"], players_info = parse_player_info(match)
+            match_info["match_score"], players_info = parse_player_info(player_table)
             print(match_info)
             # finally, add match_entry to recent_matches
             match_entry = {
