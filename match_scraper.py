@@ -68,12 +68,12 @@ def extract_cookies(request_cookies):
 
 
 def goto_personal_data(page, url):
-    page.goto(gcpd_url)
+    page.goto(url)
 
     if "Personal Game Data" not in page.title():
         logging.error("Can't get to Personal Game Data page")
         authenticate(True)
-        page.goto(gcpd_url)
+        page.goto(url)
         if "Personal Game Data" not in page.title():
             # CATASTROPHIC FAILURE HAS OCCURRED!
             # We should handle this in some nice, Windows service-y way.
