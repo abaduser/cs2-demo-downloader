@@ -14,15 +14,11 @@ logger = logging.getLogger("web_scraper")
 logging.basicConfig(level=logging.INFO)
 
 
-def poll_scraper(match_types, webauth):
-    for match_type in match_types:
-        download_matches(match_type, webauth)
-
-
-def download_matches(tab, webauth):
-    recent_matches, folder = scrape_match(tab, webauth)
-    recent_match_urls = list(filter(None, [match["url"] for match in recent_matches]))
-    url_downloader(webauth.session, recent_match_urls, folder)
+def download_matches(tabs, webauth):
+    for tab in tabs:
+        recent_matches, folder = scrape_match(tab, webauth)
+        recent_match_urls = list(filter(None, [match["url"] for match in recent_matches]))
+        url_downloader(webauth.session, recent_match_urls, folder)
 
 
 def load_webauth_pickle(path):

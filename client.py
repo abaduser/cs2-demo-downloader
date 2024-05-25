@@ -45,7 +45,7 @@ def main():
     print("[CS2 DEMO DOWNLOADER]")
     print("------------------------------------")
     webauth = match_scraper.authenticate()
-    match_scraper.poll_scraper(settings["match_types_to_download"], webauth)
+    match_scraper.download_matches(settings["match_types_to_download"], webauth)
 
 
 if __name__ == "__main__":
