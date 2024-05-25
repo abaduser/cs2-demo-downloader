@@ -12,7 +12,6 @@ from pathlib import Path
 
 logger = logging.getLogger("web_scraper")
 logging.basicConfig(level=logging.INFO)
-PICKLE_PATH = Path("wa.pickle")
 
 
 def poll_scraper(match_types, webauth):
