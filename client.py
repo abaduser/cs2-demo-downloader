@@ -1,6 +1,8 @@
-import match_scraper as match_scraper
-import toml
 import os
+
+import toml
+
+import match_scraper as match_scraper
 
 SETTINGS_FILE = "settings.toml"
 SETTINGS_TEMPLATE = {

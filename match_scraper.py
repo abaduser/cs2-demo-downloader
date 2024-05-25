@@ -1,14 +1,14 @@
-from playwright.sync_api import sync_playwright
-import steam.webauth as steam_auth
-from bs4 import BeautifulSoup
-import pickle
 import logging
+import pickle
 import re
 from pathlib import Path
-from downloader import url_downloader
 from time import sleep
 
-from pathlib import Path
+import steam.webauth as steam_auth
+from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
+
+from downloader import url_downloader
 
 logger = logging.getLogger("web_scraper")
 logging.basicConfig(level=logging.INFO)
