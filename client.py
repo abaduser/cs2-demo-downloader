@@ -13,6 +13,7 @@ SETTINGS_TEMPLATE = {
     },
 }
 
+
 def generate_new_settings():
     # TODO: come up with a better way of setting this up to expand with more settings in the future, not as hardcoded.
     setting_comments = [

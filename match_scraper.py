@@ -82,11 +82,11 @@ def goto_personal_data(page, url):
         page.goto(gcpd_url)
         if "Personal Game Data" not in page.title():
             logging.error("Couldn't auth. Aborting webscraper!")
-            # CATASTROPHIC FAILURE HAS OCCURRED! 
+            # CATASTROPHIC FAILURE HAS OCCURRED!
             # We should handle this in some nice, Windows service-y way.
             return False
     return True
-    
+
 
 def match_table_empty(page):
     table_locator = page.locator("table.generic_kv_table.csgo_scoreboard_root tbody tr")
@@ -111,21 +111,17 @@ def fetch_match_table(page):
             return None
     page_soup = BeautifulSoup(page.content(), "html.parser")
     match_table = page_soup.find("table", class_="csgo_scoreboard_root")
-    return match_table 
+    return match_table
 
 
 def parse_map_info(match):
-    downloadbutton = map_table.find(
-        "td", class_="csgo_scoreboard_cell_noborder"
-    )
+    downloadbutton = map_table.find("td", class_="csgo_scoreboard_cell_noborder")
     if downloadbutton:
         a = downloadbutton.find("a")
         if a:
             downloadURL = a.get("href")
 
-    map_info = [
-        info.get_text(strip=True) for info in map_table.find_all("td")
-    ]
+    map_info = [info.get_text(strip=True) for info in map_table.find_all("td")]
     if len(map_info) > 5:
         extracted_match_info = extracted_match_info[:-1]
     return map_info
@@ -133,9 +129,7 @@ def parse_map_info(match):
 
 def parse_player_info(match):
     # do the score while we have the players_table
-    score = player_table.find(
-        "td", class_="csgo_scoreboard_score"
-    ).get_text(strip=True)
+    score = player_table.find("td", class_="csgo_scoreboard_score").get_text(strip=True)
 
     # grab all rows
     player_rows = player_table.find_all("tr")
@@ -148,14 +142,9 @@ def parse_player_info(match):
     valid_player_rows = player_rows[1:6] + player_rows[7:]
     players_info = {}
     for player in valid_player_rows:
-        player_name = player.find("a", class_="linkTitle").get_text(
-            strip=True
-        )
+        player_name = player.find("a", class_="linkTitle").get_text(strip=True)
         # make strings out of every stat but the first one, which is the name
-        stats = [
-            s.get_text(strip=True)
-            for s in player.find_all("td")[1:]
-            ]
+        stats = [s.get_text(strip=True) for s in player.find_all("td")[1:]]
         print(stats)
         player_stats = {
             "ping": stats[0],
@@ -167,7 +156,7 @@ def parse_player_info(match):
             "score": stats[6],
         }
         players_info[player_name] = player_stats
-    return score, players_info 
+    return score, players_info
 
 
 def scrape_match(tab, webauth):
@@ -209,9 +198,9 @@ def scrape_match(tab, webauth):
         downloadURL = ""
 
         # match_info process
-        map_table = match.find(
-            "table", class_="csgo_scoreboard_inner_left"
-        ).find("tbody")
+        map_table = match.find("table", class_="csgo_scoreboard_inner_left").find(
+            "tbody"
+        )
         if map_table:
             logging.info("Found map table...")
             map_info = parse_map_info(match)
@@ -221,16 +210,16 @@ def scrape_match(tab, webauth):
                 "ranked": map_info[2],
                 "wait_time": map_info[3],
                 "match_duration": map_info[4],
-                "match_score": "" 
+                "match_score": "",
             }
 
         # player_info process
-        player_table = match.find(
-            "table", class_="csgo_scoreboard_inner_right"
-        ).find("tbody")
+        player_table = match.find("table", class_="csgo_scoreboard_inner_right").find(
+            "tbody"
+        )
         if player_table:
             logging.info("Found player_table...")
-            match_info["match_score"], players_info = parse_player_info(match) 
+            match_info["match_score"], players_info = parse_player_info(match)
             print(match_info)
             # finally, add match_entry to recent_matches
             match_entry = {
@@ -243,4 +232,3 @@ def scrape_match(tab, webauth):
     logging.info(f"Page Scrape complete.")
 
     return recent_matches, tab
-
