@@ -157,6 +157,7 @@ def scrape_matches(tab, webauth):
     page_soup = None
     recent_matches = []
 
+    # Look to move this into fetch_match_table
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(user_agent=webauth.session.headers["User-Agent"])
