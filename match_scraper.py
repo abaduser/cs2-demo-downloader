@@ -30,6 +30,7 @@ def load_webauth_pickle(path):
     logging.info(f"Loading an existing pickle from {path}")
     return pickle.loads(open(path, "rb").read())
 
+
 def create_webauth_pickle(path):
     logging.info("Authentication required from Steam.")
     logging.warning("Storing session on disk!")
@@ -44,6 +45,7 @@ def create_webauth_pickle(path):
         logging.error("Failed to pickle the session!")
         logging.warn("Session was not pickled!")
     return webauth
+
 
 def authenticate(ForceAuth=False):
     webauth_pickle_path = Path("webauth.pickle")
@@ -88,9 +90,7 @@ def goto_personal_data(page, url):
 
 def match_table_empty(page):
     table_locator = page.locator("table.generic_kv_table.csgo_scoreboard_root tbody tr")
-
     row_count = table_locator.count()
-
     if row_count == 0 or (
         row_count == 1 and table_locator.first.locator("th").count() > 0
     ):
@@ -103,11 +103,71 @@ def match_table_empty(page):
 def fetch_match_table(page):
     # logic for checking if theres a load more button as the only item
     # while we find no match elements on the page, click load more.
+    retries = 0
     while match_table_empty(page):
         page.locator("#load_more_clickable").click()
+        retries = retries + 1
+        if retries == 10:
+            return None
     page_soup = BeautifulSoup(page.content(), "html.parser")
     match_table = page_soup.find("table", class_="csgo_scoreboard_root")
     return match_table 
+
+
+def parse_map_info(match):
+    downloadbutton = map_table.find(
+        "td", class_="csgo_scoreboard_cell_noborder"
+    )
+    if downloadbutton:
+        a = downloadbutton.find("a")
+        if a:
+            downloadURL = a.get("href")
+
+    map_info = [
+        info.get_text(strip=True) for info in map_table.find_all("td")
+    ]
+    if len(map_info) > 5:
+        extracted_match_info = extracted_match_info[:-1]
+    return map_info
+
+
+def parse_player_info(match):
+    # do the score while we have the players_table
+    score = player_table.find(
+        "td", class_="csgo_scoreboard_score"
+    ).get_text(strip=True)
+
+    # grab all rows
+    player_rows = player_table.find_all("tr")
+    if not player_rows:
+        logging.error("Found no player rows!")
+        return None, None
+
+    logging.info("Found player_rows...")
+    # throwaway the header (first), and score row (7th)
+    valid_player_rows = player_rows[1:6] + player_rows[7:]
+    players_info = {}
+    for player in valid_player_rows:
+        player_name = player.find("a", class_="linkTitle").get_text(
+            strip=True
+        )
+        # make strings out of every stat but the first one, which is the name
+        stats = [
+            s.get_text(strip=True)
+            for s in player.find_all("td")[1:]
+            ]
+        print(stats)
+        player_stats = {
+            "ping": stats[0],
+            "kills": stats[1],
+            "assists": stats[2],
+            "deaths": stats[3],
+            "mvp": stats[4],
+            "hsp": stats[5],
+            "score": stats[6],
+        }
+        players_info[player_name] = player_stats
+    return score, players_info 
 
 
 def scrape_match(tab, webauth):
@@ -130,98 +190,57 @@ def scrape_match(tab, webauth):
         context.close()
         browser.close()
 
-    if match_table:
-        logging.info("Found csgo_scoreboard_root...")
-        matches = match_table.find_all("tr", style=re.compile("display: table-row;"))
+    if not match_table:
+        logging.error("Unable to find a match table!")
+        return None
 
-        if matches:
-            logging.info("Found matches...")
-            for match in matches:
-                # map_info : Map, Date, Ranked, Wait Time, Match duration, Match Score
-                # Players (Player : Stats)
-                players_info = {}
-                # Player (Name) : Ping, Kills, Assists, Deaths, MVPs, HSP, Score
-                downloadURL = ""
+    logging.info("Found csgo_scoreboard_root...")
+    matches = match_table.find_all("tr", style=re.compile("display: table-row;"))
+    if not matches:
+        logging.error("Unable to find any matches!")
+        return None
 
-                # match_info process
-                map_table = match.find(
-                    "table", class_="csgo_scoreboard_inner_left"
-                ).find("tbody")
-                if map_table:
+    logging.info("Found matches...")
+    for match in matches:
+        # map_info : Map, Date, Ranked, Wait Time, Match duration, Match Score
+        # Players (Player : Stats)
+        players_info = {}
+        # Player (Name) : Ping, Kills, Assists, Deaths, MVPs, HSP, Score
+        downloadURL = ""
 
-                    logging.info("Found map_table...")
-                    downloadbutton = map_table.find(
-                        "td", class_="csgo_scoreboard_cell_noborder"
-                    )
-                    if downloadbutton:
-                        a = downloadbutton.find("a")
-                        if a:
-                            downloadURL = a.get("href")
+        # match_info process
+        map_table = match.find(
+            "table", class_="csgo_scoreboard_inner_left"
+        ).find("tbody")
+        if map_table:
+            logging.info("Found map table...")
+            map_info = parse_map_info(match)
+            match_info = {
+                "map": map_info[0],
+                "date": map_info[1],
+                "ranked": map_info[2],
+                "wait_time": map_info[3],
+                "match_duration": map_info[4],
+                "match_score": "" 
+            }
 
-                    extracted_match_info = [
-                        info.get_text(strip=True) for info in map_table.find_all("td")
-                    ]
-                    if len(extracted_match_info) > 5:
-                        extracted_match_info = extracted_match_info[:-1]
-                    match_info = {
-                        "map": extracted_match_info[0],
-                        "date": extracted_match_info[1],
-                        "ranked": extracted_match_info[2],
-                        "wait_time": extracted_match_info[3],
-                        "match_duration": extracted_match_info[4],
-                        "match_score": "" 
-                    }
-
-                # player_info process
-                player_table = match.find(
-                    "table", class_="csgo_scoreboard_inner_right"
-                ).find("tbody")
-                if player_table:
-                    logging.info("Found player_table...")
-                    # do the score while we have the players_table
-                    match_score = player_table.find(
-                        "td", class_="csgo_scoreboard_score"
-                    ).get_text(strip=True)
-                    match_info["match_score"] = match_score
-
-                    # grab all rows
-                    player_rows = player_table.find_all("tr")
-                    if player_rows:
-                        logging.info("Found player_rows...")
-                        # throwaway the header (first), and score row (7th)
-                        valid_player_rows = player_rows[1:6] + player_rows[7:]
-                        for player in valid_player_rows:
-                            player_name = player.find("a", class_="linkTitle").get_text(
-                                strip=True
-                            )
-                            # make strings out of every stat but the first one, which is the name
-                            stats = [
-                                s.get_text(strip=True)
-                                for s in player.find_all("td")[1:]
-                            ]
-                            print(stats)
-                            player_stats = {
-                                "ping": stats[0],
-                                "kills": stats[1],
-                                "assists": stats[2],
-                                "deaths": stats[3],
-                                "mvp": stats[4],
-                                "hsp": stats[5],
-                                "score": stats[6],
-                            }
-                            players_info[player_name] = player_stats
-
-                print(match_info)
-                # finally, add match_entry to recent_matches
-                match_entry = {
-                    "url": downloadURL,
-                    "match_info": match_info,
-                    "players_info": players_info,
-                }
-                recent_matches.append(match_entry)
+        # player_info process
+        player_table = match.find(
+            "table", class_="csgo_scoreboard_inner_right"
+        ).find("tbody")
+        if player_table:
+            logging.info("Found player_table...")
+            match_info["match_score"], players_info = parse_player_info(match) 
+            print(match_info)
+            # finally, add match_entry to recent_matches
+            match_entry = {
+                "url": downloadURL,
+                "match_info": match_info,
+                "players_info": players_info,
+            }
+            recent_matches.append(match_entry)
 
     logging.info(f"Page Scrape complete.")
 
     return recent_matches, tab
-
 
