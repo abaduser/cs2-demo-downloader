@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 
 def download_matches(tabs, webauth):
     for tab in tabs:
-        recent_matches, folder = scrape_match(tab, webauth)
+        recent_matches, folder = scrape_matches(tab, webauth)
         recent_match_urls = list(filter(None, [match["url"] for match in recent_matches]))
         url_downloader(webauth.session, recent_match_urls, folder)
 
@@ -153,7 +153,7 @@ def parse_player_info(match):
     return score, players_info
 
 
-def scrape_match(tab, webauth):
+def scrape_matches(tab, webauth):
     page_soup = None
     recent_matches = []
 
