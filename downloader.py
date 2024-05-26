@@ -1,8 +1,9 @@
-import os
-import tqdm
-from datetime import datetime, timedelta
-import logging
 import json
+import logging
+import os
+from datetime import datetime, timedelta
+
+import tqdm
 
 logging.basicConfig(level=logging.INFO)
 
