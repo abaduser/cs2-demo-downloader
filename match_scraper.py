@@ -216,13 +216,13 @@ def scrape_matches(tab, webauth):
         if player_table:
             logging.info("Found player_table...")
             match_info["match_score"], players_info = parse_player_info(player_table)
-            print(match_info)
             # finally, add match_entry to recent_matches
             match_entry = {
                 "url": downloadURL,
                 "match_info": match_info,
                 "players_info": players_info,
             }
+            logging.info(f"Match recorded: {match_entry}")
             recent_matches.append(match_entry)
 
     logging.info(f"Page Scrape complete.")

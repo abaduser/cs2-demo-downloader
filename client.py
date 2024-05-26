@@ -7,7 +7,6 @@ import match_scraper as match_scraper
 SETTINGS_FILE = "settings.toml"
 SETTINGS_TEMPLATE = {
     "Settings": {
-        "community_id": "",
         "match_types_to_download": ["premier"],
         "download_behavior": "periodic",
         "download_interval": "daily",
