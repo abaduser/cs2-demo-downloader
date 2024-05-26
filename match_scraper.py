@@ -1,6 +1,7 @@
 import logging
 import pickle
 import re
+import click
 from pathlib import Path
 
 import steam.webauth as steam_auth
@@ -25,12 +26,11 @@ def load_webauth_pickle(path):
     return pickle.loads(open(path, "rb").read())
 
 
-def create_webauth_pickle(path):
+def create_webauth_pickle(path, username):
     logging.info("Authentication required from Steam.")
     logging.warning("Storing session on disk!")
-    username = input("Steam Username: ")
     webauth = steam_auth.WebAuth()
-    webauth.cli_login(username, input(f"Password for {username}: "))
+    webauth.cli_login(username, click.prompt("Enter Steam Password: ", hide_input=True, confirmation_prompt=True))
     try:
         with open(path, "wb") as f:
             f.write(pickle.dumps(webauth))
@@ -41,13 +41,15 @@ def create_webauth_pickle(path):
     return webauth
 
 
-def authenticate(ForceAuth=False):
-    webauth_pickle_path = Path("webauth.pickle")
+def authenticate(username, ForceAuth=False):
+    webauth_pickle_path = Path(username + ".pickle")
 
     if webauth_pickle_path.exists() and not ForceAuth:
         webauth = load_webauth_pickle(webauth_pickle_path)
     else:
-        webauth = create_webauth_pickle(webauth_pickle_path)
+        if username is None:
+            username = input("Enter Steam Username: ")
+        webauth = create_webauth_pickle(webauth_pickle_path, username)
     return webauth
 
 
