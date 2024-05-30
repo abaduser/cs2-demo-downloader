@@ -26,11 +26,14 @@ def load_webauth_pickle(path):
     return pickle.loads(open(path, "rb").read())
 
 
-def create_webauth_pickle(path, username):
+def create_webauth_pickle(path, username, password):
     logging.info("Authentication required from Steam.")
     logging.warning("Storing session on disk!")
     webauth = steam_auth.WebAuth()
-    webauth.cli_login(username, click.prompt("Enter Steam Password: ", hide_input=True, confirmation_prompt=True))
+    if password:
+        webauth.cli_login(username, password)
+    else:
+        webauth.cli_login(username, click.prompt("Enter Steam Password: ", hide_input=True, confirmation_prompt=True))
     try:
         with open(path, "wb") as f:
             f.write(pickle.dumps(webauth))
@@ -41,7 +44,7 @@ def create_webauth_pickle(path, username):
     return webauth
 
 
-def authenticate(username, ForceAuth=False):
+def authenticate(username, password, ForceAuth=False):
     webauth_pickle_path = Path(username + ".pickle")
 
     if webauth_pickle_path.exists() and not ForceAuth:
@@ -49,7 +52,7 @@ def authenticate(username, ForceAuth=False):
     else:
         if username is None:
             username = input("Enter Steam Username: ")
-        webauth = create_webauth_pickle(webauth_pickle_path, username)
+        webauth = create_webauth_pickle(webauth_pickle_path, username, password)
     return webauth
 
 
@@ -63,7 +66,7 @@ def extract_cookies(request_cookies):
             "path": cookie.path,
             "httpOnly": bool(cookie._rest.get("HttpOnly", False)),
             "secure": bool(cookie._rest.get("Secure", False)),
-            "sameSite": "Lax",  # SameSite is not directly available, default to 'Lax'
+            "sameSite": "Lax", 
         }
         playwright_cookies.append(playwright_cookie)
     return playwright_cookies
