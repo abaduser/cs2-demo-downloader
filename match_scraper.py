@@ -17,7 +17,9 @@ logging.basicConfig(level=logging.INFO)
 def download_matches(tabs, webauth):
     for tab in tabs:
         recent_matches, folder = scrape_matches(tab, webauth)
-        recent_match_urls = list(filter(None, [match["url"] for match in recent_matches]))
+        recent_match_urls = list(
+            filter(None, [match["url"] for match in recent_matches])
+        )
         url_downloader(webauth.session, recent_match_urls, folder)
 
 
@@ -33,7 +35,10 @@ def create_webauth_pickle(path, username, password):
     if password:
         webauth.cli_login(username, password)
     else:
-        webauth.cli_login(username, click.prompt("Enter Steam Password: ", hide_input=True, confirmation_prompt=True))
+        webauth.cli_login(
+            username,
+            click.prompt("Enter Steam Password: ", hide_input=True),
+        )
     try:
         with open(path, "wb") as f:
             f.write(pickle.dumps(webauth))
@@ -45,13 +50,13 @@ def create_webauth_pickle(path, username, password):
 
 
 def authenticate(username, password, ForceAuth=False):
+    if username == "":
+        username = input("Enter Steam Username :")
     webauth_pickle_path = Path(username + ".pickle")
 
     if webauth_pickle_path.exists() and not ForceAuth:
         webauth = load_webauth_pickle(webauth_pickle_path)
     else:
-        if username is None:
-            username = input("Enter Steam Username: ")
         webauth = create_webauth_pickle(webauth_pickle_path, username, password)
     return webauth
 
@@ -66,7 +71,7 @@ def extract_cookies(request_cookies):
             "path": cookie.path,
             "httpOnly": bool(cookie._rest.get("HttpOnly", False)),
             "secure": bool(cookie._rest.get("Secure", False)),
-            "sameSite": "Lax", 
+            "sameSite": "Lax",
         }
         playwright_cookies.append(playwright_cookie)
     return playwright_cookies

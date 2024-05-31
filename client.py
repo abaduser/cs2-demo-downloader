@@ -4,7 +4,7 @@ import match_scraper as match_scraper
 import logging
 
 logger = logging.getLogger("c2dd")
-# TODO: make sure logging is less verbose with a debug flag or something. maybe a --verbose flag. 
+# TODO: make sure logging is less verbose with a debug flag or something. maybe a --verbose flag.
 # Maybe also figure out how logging is nested or handled across modules.
 logging.basicConfig(level=logging.INFO)
 
@@ -26,17 +26,48 @@ SETTINGS_COMMENTS = {
 }
 
 
+def validate_settings(settings):
+    # validate the settings dictionary
+    # validate all keys exist
+    for key in SETTINGS_TEMPLATE["Settings"]:
+        if key not in settings:
+            logging.error(f"Invalid Settings file, missing setting: {key}")
+            return False
+
+    if settings["download_behavior"] not in ["periodic", "startup", "manual"]:
+        logging.error(
+            f"Invalid download behavior: {settings['download_behavior']}. Must be one of 'periodic', 'startup', 'manual'"
+        )
+        return False
+
+    if settings["download_interval"] not in ["daily", "hourly"]:
+        logging.error(
+            f"Invalid download interval: {settings['download_interval']}. Must be one of 'daily', 'hourly'"
+        )
+        return False
+
+    return True
+
+
 def load_settings(settings_file):
     # try to load the settings file, if it doesn't exist generate one.
     try:
         with open(settings_file, "r") as f:
-            return toml.load(f)["Settings"]
+            settings = toml.load(f)["Settings"]
+            if validate_settings(settings):
+                return settings
+            else:
+                logging.error(
+                    "Invalid settings file. Please correct the settings file."
+                )
+                exit(1)
     except FileNotFoundError:
         logging.error("Settings file not found. Generating new settings file.")
         new_settings = SETTINGS_TEMPLATE
         write_settings_comments(settings_file, new_settings)
         # return the settings dictionary from the new settings file.
-        return toml.load(new_settings)["Settings"]
+        return toml.loads(new_settings)["Settings"]
+
 
 def write_settings_comments(settings_file, settings):
     logging.info(f"Writing settings to {settings_file}")
@@ -45,7 +76,7 @@ def write_settings_comments(settings_file, settings):
     for line in toml_dissected:
         if line in SETTINGS_COMMENTS:
             toml_dissected.insert(toml_dissected.index(line), SETTINGS_COMMENTS[line])
-    
+
     with open(settings_file, "w") as f:
         f.writelines([line + "\n" for line in toml_dissected])
 
@@ -53,25 +84,40 @@ def write_settings_comments(settings_file, settings):
 # Need to add commands for
 # browsing matches / manual download
 @click.group()
-@click.option("--settings", "settings_file", type=click.Path(exists=True), default=SETTINGS_FILE, help="Path to settings file.")
+@click.option(
+    "--settings",
+    "settings_file",
+    default=SETTINGS_FILE,
+    help="Path to settings file.",
+)
 # @click.option("--debug/--no-debug", default=False)
 @click.pass_context
 def c2dd(ctx, settings_file):
     # load settings dictionary, into context key 'settings'
     ctx.ensure_object(dict)
-    ctx.obj['settings'] = load_settings(settings_file)
+    ctx.obj["settings"] = load_settings(settings_file)
 
-    # authenticate before every command (TODO: change)
-    ctx.obj['wa'] = match_scraper.authenticate()
+    if ctx.invoked_subcommand != "authenticate":
+        ctx.obj["wa"] = match_scraper.authenticate(
+            ctx.obj["settings"]["steam_username"], None, False
+        )
 
 
 @c2dd.command()
-@click.option("--username", default=None, help="Steam username of the account to download demos from.")
-@click.option("--password", default=None, prompt="Enter Steam Password: ", hide_input=True, confirmation_prompt=True, help="Steam password.")
+@click.option(
+    "--username",
+    default=None,
+    help="Steam username of the account to download demos from.",
+)
+@click.option(
+    "--password",
+    default=None,
+    help="Steam password.",
+)
 @click.pass_context
 def authenticate(ctx, username, password):
     click.echo("Authenticating with Steam...")
-    steam_user = ctx.obj['settings']["steam_username"]
+    steam_user = ctx.obj["settings"]["steam_username"]
     if username:
         steam_user = username
 
@@ -82,9 +128,10 @@ def authenticate(ctx, username, password):
 @click.pass_context
 def dl(ctx):
     click.echo("Downloading demos...")
-    match_scraper.download_matches(ctx.obj['settings']["match_types_to_download"], ctx.obj['wa'])
+    match_scraper.download_matches(
+        ctx.obj["settings"]["match_types_to_download"], ctx.obj["wa"]
+    )
 
-    
 
 if __name__ == "__main__":
     c2dd()

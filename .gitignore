@@ -1,6 +1,7 @@
 todo.md
 demos/*
-wa.pickle
+*.pickle
+*.toml
 cache.json
 
 # Byte-compiled / optimized / DLL files
