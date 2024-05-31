@@ -1,5 +1,0 @@
-[Settings]
-community_id = "poggiechamp"
-# Make sure to set this is set to the type of matches you want to track (premier, competitivepermap, scrimmage, wingman)
-match_types_to_download = [ "premier",]
-
