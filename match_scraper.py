@@ -16,11 +16,14 @@ logging.basicConfig(level=logging.INFO)
 
 def download_matches(tabs, webauth):
     for tab in tabs:
-        recent_matches, folder = scrape_matches(tab, webauth)
+        recent_matches = scrape_matches(tab, webauth)
+        if recent_matches is None:
+            logging.error("No matches found!")
+            continue
         recent_match_urls = list(
             filter(None, [match["url"] for match in recent_matches])
         )
-        url_downloader(webauth.session, recent_match_urls, folder)
+        url_downloader(webauth.session, recent_match_urls, tab)
 
 
 def load_webauth_pickle(path):
@@ -37,7 +40,9 @@ def create_webauth_pickle(path, username, password):
     else:
         webauth.cli_login(
             username,
-            click.prompt("Enter Steam Password: ", hide_input=True),
+            click.prompt(
+                "Enter Steam Password: ", hide_input=True
+            ),
         )
     try:
         with open(path, "wb") as f:
@@ -58,7 +63,7 @@ def authenticate(username, password, ForceAuth=False):
         webauth = load_webauth_pickle(webauth_pickle_path)
     else:
         webauth = create_webauth_pickle(webauth_pickle_path, username, password)
-    return webauth
+    return webauth, username
 
 
 def extract_cookies(request_cookies):
@@ -82,7 +87,7 @@ def goto_personal_data(page, url):
 
     if "Personal Game Data" not in page.title():
         logging.error("Can't get to Personal Game Data page")
-        authenticate(True)
+        authenticate(None, None, True)
         page.goto(url)
         if "Personal Game Data" not in page.title():
             # CATASTROPHIC FAILURE HAS OCCURRED!
@@ -100,20 +105,17 @@ def match_table_empty(page):
         logging.info("match_table empty")
         return True
     logging.info("match_table not empty!")
-    return False
+    return False 
 
 
 def fetch_match_table(page):
     # logic for checking if theres a load more button as the only item
     # while we find no match elements on the page, click load more.
-    retries = 0
     while match_table_empty(page):
         page.locator("#load_more_clickable").click()
-        retries = retries + 1
-        if retries == 10:
-            return None
     page_soup = BeautifulSoup(page.content(), "html.parser")
     match_table = page_soup.find("table", class_="csgo_scoreboard_root")
+    logging.info("Found csgo_scoreboard_root...")
     return match_table
 
 
@@ -125,6 +127,7 @@ def parse_map_info(map_table):
             downloadURL = a.get("href")
 
     map_info = [info.get_text(strip=True) for info in map_table.find_all("td")]
+    # !!!! PROBLEM AREA
     if len(map_info) > 5:
         extracted_match_info = extracted_match_info[:-1]
     return map_info, downloadURL
@@ -187,8 +190,8 @@ def scrape_matches(tab, webauth):
         logging.error("Unable to find a match table!")
         return None
 
-    logging.info("Found csgo_scoreboard_root...")
-    matches = match_table.find_all("tr", style=re.compile("display: table-row;"))
+    matches = match_table.find_all("tr")
+    matches = [match for match in matches if match.find("td", class_="val_left")]
 
     if not matches:
         logging.error("Unable to find any matches!")
@@ -237,4 +240,4 @@ def scrape_matches(tab, webauth):
 
     logging.info(f"Page Scrape complete.")
 
-    return recent_matches, tab
+    return recent_matches 

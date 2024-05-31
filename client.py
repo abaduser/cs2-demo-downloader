@@ -98,7 +98,7 @@ def c2dd(ctx, settings_file):
     ctx.obj["settings"] = load_settings(settings_file)
 
     if ctx.invoked_subcommand != "authenticate":
-        ctx.obj["wa"] = match_scraper.authenticate(
+        ctx.obj["wa"], _ = match_scraper.authenticate(
             ctx.obj["settings"]["steam_username"], None, False
         )
 
@@ -121,7 +121,7 @@ def authenticate(ctx, username, password):
     if username:
         steam_user = username
 
-    match_scraper.authenticate(steam_user, password, True)
+    _, ctx.obj["settings"]["steam_username"] = match_scraper.authenticate(steam_user, password, True)
 
 
 @c2dd.command()
