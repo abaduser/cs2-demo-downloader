@@ -104,14 +104,17 @@ def match_table_empty(page):
     ):
         logging.info("match_table empty")
         return True
-    logging.info("match_table not empty!")
-    return False 
+    else:
+        logging.info("match_table not empty!")
+        return False 
 
 
 def fetch_match_table(page):
     # logic for checking if theres a load more button as the only item
     # while we find no match elements on the page, click load more.
     while match_table_empty(page):
+        page.locator("#load_more_clickable").click()
+    for _ in range(4):
         page.locator("#load_more_clickable").click()
     page_soup = BeautifulSoup(page.content(), "html.parser")
     match_table = page_soup.find("table", class_="csgo_scoreboard_root")
@@ -121,6 +124,7 @@ def fetch_match_table(page):
 
 def parse_map_info(map_table):
     downloadbutton = map_table.find("td", class_="csgo_scoreboard_cell_noborder")
+    downloadURL = ""
     if downloadbutton:
         a = downloadbutton.find("a")
         if a:
