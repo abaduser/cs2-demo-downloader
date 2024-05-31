@@ -129,7 +129,7 @@ def parse_map_info(map_table):
     map_info = [info.get_text(strip=True) for info in map_table.find_all("td")]
     # !!!! PROBLEM AREA
     if len(map_info) > 5:
-        extracted_match_info = extracted_match_info[:-1]
+        map_info = map_info[:-1]
     return map_info, downloadURL
 
 
