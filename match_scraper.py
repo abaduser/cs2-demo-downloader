@@ -1,6 +1,5 @@
 import logging
 import pickle
-import re
 import click
 from pathlib import Path
 
@@ -131,7 +130,6 @@ def parse_map_info(map_table):
             downloadURL = a.get("href")
 
     map_info = [info.get_text(strip=True) for info in map_table.find_all("td")]
-    # !!!! PROBLEM AREA
     if len(map_info) > 5:
         map_info = map_info[:-1]
     return map_info, downloadURL
