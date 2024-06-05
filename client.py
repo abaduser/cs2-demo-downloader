@@ -14,7 +14,7 @@ SETTINGS_TEMPLATE = {
         "steam_username": "",
         "match_types_to_download": ["premier"],
         "download_behavior": "periodic",
-        "download_interval": "daily",
+        "download_interval": "4",
         "download_location": "",
     },
 }
@@ -22,7 +22,7 @@ SETTINGS_TEMPLATE = {
 SETTINGS_COMMENTS = {
     "match_types_to_download": "# Make sure to set this is set to the type of matches you want to track (premier, competitivepermap, scrimmage, wingman)",
     "download_behavior": "# Download behavior dictates when to download your demos 'periodic', 'startup' and 'manual'",
-    "download_interval": "# Intervals available are daily / hourly",
+    "download_interval": "# Intervals measured in hours, only used when download_behavior is set to 'periodic' or with the poll command",
 }
 
 
@@ -131,6 +131,20 @@ def dl(ctx):
     match_scraper.download_matches(
         ctx.obj["settings"]["match_types_to_download"], ctx.obj["wa"]
     )
+
+@c2dd.command()
+@click.pass_context
+@click.option("--interval", default=None, help="interval in hours to poll for new matches.")
+def poll(ctx, interval):
+    download_interval = ctx.obj["settings"]["download_interval"]
+    if interval:
+        download_interval = interval
+    while(True):
+        logging.info("Downloading demos...")
+        match_scraper.download_matches(
+            ctx.obj["settings"]["match_types_to_download"], ctx.obj["wa"]
+        )
+        time.sleep(download_interval * 3600)
 
 
 if __name__ == "__main__":

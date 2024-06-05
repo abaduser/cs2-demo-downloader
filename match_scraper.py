@@ -223,6 +223,8 @@ def scrape_matches(tab, webauth):
                 "match_duration": map_info[4],
                 "match_score": "",
             }
+        
+        # TODO: Potentially skip the match if it was too recent, the demo might not be done processing.
 
         # player_info process
         player_table = match.find("table", class_="csgo_scoreboard_inner_right").find(
