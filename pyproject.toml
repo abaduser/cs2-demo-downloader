@@ -1,0 +1,22 @@
+[project]
+name = "cs2_demo_downloader"
+authors = [{name = "abaduser", email = "abaduser.pw@proton.me"},]
+version = "0.1.0"
+description = "cs2 demo downloader command line utility"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.1",
+    "requests",
+    "pytest-playwright",
+    "beautifulsoup4",
+    "tqdm",
+    "toml",
+    "steam @ git+https://github.com/FailSpy/steam-py-lib",
+]
+
+[project.scripts]
+c2dd = "cs2_demo_downloader.client:c2dd"
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"

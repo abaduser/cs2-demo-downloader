@@ -8,7 +8,7 @@ import steam.webauth as steam_auth
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from downloader import url_downloader
+from cs2_demo_downloader.downloader import url_downloader
 
 logger = logging.getLogger("web_scraper")
 logging.basicConfig(level=logging.INFO)
@@ -40,9 +40,7 @@ def create_webauth_pickle(path, username, password):
     else:
         webauth.cli_login(
             username,
-            click.prompt(
-                "Enter Steam Password: ", hide_input=True
-            ),
+            click.prompt("Enter Steam Password: ", hide_input=True),
         )
     try:
         with open(path, "wb") as f:
@@ -106,7 +104,7 @@ def match_table_empty(page):
         return True
     else:
         logging.info("match_table not empty!")
-        return False 
+        return False
 
 
 def fetch_match_table(page):
@@ -224,7 +222,7 @@ def scrape_matches(tab, webauth):
                 "match_duration": map_info[4],
                 "match_score": "",
             }
-        
+
         # ex
         # 2024-07-10 01:57:06 GMT
         logging.debug(f"Match date: {match_info['date']}")
@@ -254,4 +252,4 @@ def scrape_matches(tab, webauth):
 
     logging.info(f"Page Scrape complete.")
 
-    return recent_matches 
+    return recent_matches

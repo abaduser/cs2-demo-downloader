@@ -1,6 +1,6 @@
 import toml
 import click
-import match_scraper as match_scraper
+import cs2_demo_downloader.match_scraper as match_scraper
 import logging
 import time
 
@@ -117,7 +117,9 @@ def authenticate(ctx, username, password):
     if username:
         steam_user = username
 
-    _, ctx.obj["settings"]["steam_username"] = match_scraper.authenticate(steam_user, password, True)
+    _, ctx.obj["settings"]["steam_username"] = match_scraper.authenticate(
+        steam_user, password, True
+    )
 
 
 @c2dd.command()
@@ -128,14 +130,17 @@ def dl(ctx):
         ctx.obj["settings"]["match_types_to_download"], ctx.obj["wa"]
     )
 
+
 @c2dd.command()
 @click.pass_context
-@click.option("--interval", default=None, help="interval in hours to poll for new matches.")
+@click.option(
+    "--interval", default=None, help="interval in hours to poll for new matches."
+)
 def poll(ctx, interval):
     download_interval = ctx.obj["settings"]["download_interval"]
     if interval:
         download_interval = interval
-    while(True):
+    while True:
         logging.info("Downloading demos...")
         match_scraper.download_matches(
             ctx.obj["settings"]["match_types_to_download"], ctx.obj["wa"]
