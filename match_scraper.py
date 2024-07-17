@@ -2,6 +2,7 @@ import logging
 import pickle
 import click
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 
 import steam.webauth as steam_auth
 from bs4 import BeautifulSoup
@@ -54,7 +55,7 @@ def create_webauth_pickle(path, username, password):
 
 
 def authenticate(username, password, ForceAuth=False):
-    if username == "":
+    if username in [None, ""]:
         username = input("Enter Steam Username :")
     webauth_pickle_path = Path(username + ".pickle")
 
@@ -224,7 +225,16 @@ def scrape_matches(tab, webauth):
                 "match_score": "",
             }
         
-        # TODO: Potentially skip the match if it was too recent, the demo might not be done processing.
+        # ex
+        # 2024-07-10 01:57:06 GMT
+        logging.debug(f"Match date: {match_info['date']}")
+        match_date = datetime.strptime(match_info["date"], "%Y-%m-%d %H:%M:%S %Z")
+        match_date = match_date.replace(tzinfo=timezone.utc)
+        current_time = datetime.now(timezone.utc)
+        thirty_minutes_ago = current_time - timedelta(minutes=30)
+        if thirty_minutes_ago <= match_date <= current_time:
+            logging.info("Match too recent, skipping...")
+            continue
 
         # player_info process
         player_table = match.find("table", class_="csgo_scoreboard_inner_right").find(
@@ -239,7 +249,7 @@ def scrape_matches(tab, webauth):
                 "match_info": match_info,
                 "players_info": players_info,
             }
-            logging.info(f"Match recorded: {match_entry}")
+            logging.debug(f"Match recorded: {match_entry}")
             recent_matches.append(match_entry)
 
     logging.info(f"Page Scrape complete.")
