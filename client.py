@@ -2,6 +2,7 @@ import toml
 import click
 import match_scraper as match_scraper
 import logging
+import time
 
 logger = logging.getLogger("c2dd")
 # TODO: make sure logging is less verbose with a debug flag or something. maybe a --verbose flag.
@@ -37,12 +38,6 @@ def validate_settings(settings):
     if settings["download_behavior"] not in ["periodic", "startup", "manual"]:
         logging.error(
             f"Invalid download behavior: {settings['download_behavior']}. Must be one of 'periodic', 'startup', 'manual'"
-        )
-        return False
-
-    if settings["download_interval"] not in ["daily", "hourly"]:
-        logging.error(
-            f"Invalid download interval: {settings['download_interval']}. Must be one of 'daily', 'hourly'"
         )
         return False
 
