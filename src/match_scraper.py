@@ -56,7 +56,7 @@ def create_webauth_pickle(path, username, password):
 
 def authenticate(username, password, ForceAuth=False):
     if username in [None, ""]:
-        username = input("Enter Steam Username :")
+        username = input("No username in settings, please enter Steam username :")
     webauth_pickle_path = Path(username + ".pickle")
 
     if webauth_pickle_path.exists() and not ForceAuth:

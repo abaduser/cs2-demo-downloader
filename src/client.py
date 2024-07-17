@@ -92,6 +92,7 @@ def c2dd(ctx, settings_file):
     ctx.ensure_object(dict)
     ctx.obj["settings"] = load_settings(settings_file)
 
+    # if running any other command than authenticate, try and authenticate with the steam username in the settings file.
     if ctx.invoked_subcommand != "authenticate":
         ctx.obj["wa"], _ = match_scraper.authenticate(
             ctx.obj["settings"]["steam_username"], None, False
