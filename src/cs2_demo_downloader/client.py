@@ -1,6 +1,6 @@
 import toml
 import click
-from .match_scraper import match_scraper
+import cs2_demo_downloader.match_scraper as match_scraper
 import logging
 import time
 
