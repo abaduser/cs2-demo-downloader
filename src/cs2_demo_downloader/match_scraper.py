@@ -8,7 +8,7 @@ import steam.webauth as steam_auth
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from cs2_demo_downloader.downloader import url_downloader
+from .downloader import url_downloader
 
 logger = logging.getLogger("web_scraper")
 logging.basicConfig(level=logging.INFO)

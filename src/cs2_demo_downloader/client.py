@@ -1,12 +1,10 @@
 import toml
 import click
-import cs2_demo_downloader.match_scraper as match_scraper
+from .match_scraper import match_scraper
 import logging
 import time
 
 logger = logging.getLogger("c2dd")
-# TODO: make sure logging is less verbose with a debug flag or something. maybe a --verbose flag.
-# Maybe also figure out how logging is nested or handled across modules.
 logging.basicConfig(level=logging.INFO)
 
 SETTINGS_FILE = "settings.toml"
