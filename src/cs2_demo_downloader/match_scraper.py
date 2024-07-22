@@ -52,15 +52,19 @@ def create_webauth_pickle(path, username, password):
     return webauth
 
 
-def authenticate(username, password, ForceAuth=False):
+def authenticate(username=None, password=None, ForceAuth=False):
+    # authentication requires a username. If none is provided, prompt the user.
     if username in [None, ""]:
         username = input("No username in settings, please enter Steam username :")
     webauth_pickle_path = Path(username + ".pickle")
 
+    # if the pickle associated with the account exists, load it. if ForceAuth is True, ignore the pickle and re authenticate as a new session.
     if webauth_pickle_path.exists() and not ForceAuth:
         webauth = load_webauth_pickle(webauth_pickle_path)
     else:
         webauth = create_webauth_pickle(webauth_pickle_path, username, password)
+
+    # return the webauth object and the username associated with the session.
     return webauth, username
 
 
@@ -84,12 +88,12 @@ def goto_personal_data(page, url):
     page.goto(url)
 
     if "Personal Game Data" not in page.title():
-        logging.error("Can't get to Personal Game Data page")
-        authenticate(None, None, True)
+        logging.warning("Failed to reach the page, trying to authenticate again.")
+        # reaching the page failed, try to authenticate over again prompting both username and password. skip loading an existing pickle.
+        authenticate(username=None, password=None, ForceAuth=True)
         page.goto(url)
         if "Personal Game Data" not in page.title():
-            # CATASTROPHIC FAILURE HAS OCCURRED!
-            # We should handle this in some nice, Windows service-y way.
+            # if we still can't get to the page, return False.
             return False
     return True
 
