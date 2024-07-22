@@ -78,17 +78,20 @@ def download_file(session, url, metadata, destination_folder):
     ensure_dir(folderpath)
     filepath = os.path.join(folderpath, filename)
 
-    with open(filepath, "wb") as f, tqdm.tqdm(
-        desc=filename,
-        total=int(response.headers.get("content-length", 0)),
-        unit="B",
-        unit_scale=True,
-        unit_divisor=1024,
-    ) as bar:
+    with (
+        open(filepath, "wb") as f,
+        tqdm.tqdm(
+            desc=filename,
+            total=int(response.headers.get("content-length", 0)),
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+        ) as download_bar,
+    ):
         for chunk in response.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
-                bar.update(len(chunk))
+                download_bar.update(len(chunk))
 
     entry = {
         "url": url,

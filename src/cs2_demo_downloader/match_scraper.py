@@ -1,13 +1,14 @@
 import logging
 import pickle
-import re
+import click
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 
 import steam.webauth as steam_auth
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from downloader import url_downloader
+from .downloader import url_downloader
 
 logger = logging.getLogger("web_scraper")
 logging.basicConfig(level=logging.INFO)
@@ -15,9 +16,14 @@ logging.basicConfig(level=logging.INFO)
 
 def download_matches(tabs, webauth):
     for tab in tabs:
-        recent_matches, folder = scrape_matches(tab, webauth)
-        recent_match_urls = list(filter(None, [match["url"] for match in recent_matches]))
-        url_downloader(webauth.session, recent_match_urls, folder)
+        recent_matches = scrape_matches(tab, webauth)
+        if recent_matches is None:
+            logging.error("No matches found!")
+            continue
+        recent_match_urls = list(
+            filter(None, [match["url"] for match in recent_matches])
+        )
+        url_downloader(webauth.session, recent_match_urls, tab)
 
 
 def load_webauth_pickle(path):
@@ -25,12 +31,17 @@ def load_webauth_pickle(path):
     return pickle.loads(open(path, "rb").read())
 
 
-def create_webauth_pickle(path):
+def create_webauth_pickle(path, username, password):
     logging.info("Authentication required from Steam.")
     logging.warning("Storing session on disk!")
-    username = input("Steam Username: ")
     webauth = steam_auth.WebAuth()
-    webauth.cli_login(username, input(f"Password for {username}: "))
+    if password:
+        webauth.cli_login(username, password)
+    else:
+        webauth.cli_login(
+            username,
+            click.prompt("Enter Steam Password: ", hide_input=True),
+        )
     try:
         with open(path, "wb") as f:
             f.write(pickle.dumps(webauth))
@@ -41,14 +52,20 @@ def create_webauth_pickle(path):
     return webauth
 
 
-def authenticate(ForceAuth=False):
-    webauth_pickle_path = Path("webauth.pickle")
+def authenticate(username=None, password=None, ForceAuth=False):
+    # authentication requires a username. If none is provided, prompt the user.
+    if username in [None, ""]:
+        username = input("No username in settings, please enter Steam username :")
+    webauth_pickle_path = Path(username + ".pickle")
 
+    # if the pickle associated with the account exists, load it. if ForceAuth is True, ignore the pickle and re authenticate as a new session.
     if webauth_pickle_path.exists() and not ForceAuth:
         webauth = load_webauth_pickle(webauth_pickle_path)
     else:
-        webauth = create_webauth_pickle(webauth_pickle_path)
-    return webauth
+        webauth = create_webauth_pickle(webauth_pickle_path, username, password)
+
+    # return the webauth object and the username associated with the session.
+    return webauth, username
 
 
 def extract_cookies(request_cookies):
@@ -61,7 +78,7 @@ def extract_cookies(request_cookies):
             "path": cookie.path,
             "httpOnly": bool(cookie._rest.get("HttpOnly", False)),
             "secure": bool(cookie._rest.get("Secure", False)),
-            "sameSite": "Lax",  # SameSite is not directly available, default to 'Lax'
+            "sameSite": "Lax",
         }
         playwright_cookies.append(playwright_cookie)
     return playwright_cookies
@@ -71,44 +88,46 @@ def goto_personal_data(page, url):
     page.goto(url)
 
     if "Personal Game Data" not in page.title():
-        logging.error("Can't get to Personal Game Data page")
-        authenticate(True)
+        logging.warning("Failed to reach the page, trying to authenticate again.")
+        # reaching the page failed, try to authenticate over again prompting both username and password. skip loading an existing pickle.
+        authenticate(username=None, password=None, ForceAuth=True)
         page.goto(url)
         if "Personal Game Data" not in page.title():
-            # CATASTROPHIC FAILURE HAS OCCURRED!
-            # We should handle this in some nice, Windows service-y way.
+            # if we still can't get to the page, return False.
             return False
     return True
 
 
-def match_table_empty(page):
+def check_for_match_table(page):
     table_locator = page.locator("table.generic_kv_table.csgo_scoreboard_root tbody tr")
     row_count = table_locator.count()
+    # determine if the table is empty or only contains an empty header row.
     if row_count == 0 or (
         row_count == 1 and table_locator.first.locator("th").count() > 0
     ):
         logging.info("match_table empty")
         return True
-    logging.info("match_table not empty!")
-    return False
+    else:
+        logging.info("match_table not empty!")
+        return False
 
 
 def fetch_match_table(page):
     # logic for checking if theres a load more button as the only item
     # while we find no match elements on the page, click load more.
-    retries = 0
-    while match_table_empty(page):
+    while check_for_match_table(page):
         page.locator("#load_more_clickable").click()
-        retries = retries + 1
-        if retries == 10:
-            return None
+    for _ in range(4):
+        page.locator("#load_more_clickable").click()
     page_soup = BeautifulSoup(page.content(), "html.parser")
     match_table = page_soup.find("table", class_="csgo_scoreboard_root")
+    logging.info("Found csgo_scoreboard_root...")
     return match_table
 
 
 def parse_map_info(map_table):
     downloadbutton = map_table.find("td", class_="csgo_scoreboard_cell_noborder")
+    downloadURL = ""
     if downloadbutton:
         a = downloadbutton.find("a")
         if a:
@@ -116,7 +135,7 @@ def parse_map_info(map_table):
 
     map_info = [info.get_text(strip=True) for info in map_table.find_all("td")]
     if len(map_info) > 5:
-        extracted_match_info = extracted_match_info[:-1]
+        map_info = map_info[:-1]
     return map_info, downloadURL
 
 
@@ -177,8 +196,8 @@ def scrape_matches(tab, webauth):
         logging.error("Unable to find a match table!")
         return None
 
-    logging.info("Found csgo_scoreboard_root...")
-    matches = match_table.find_all("tr", style=re.compile("display: table-row;"))
+    matches = match_table.find_all("tr")
+    matches = [match for match in matches if match.find("td", class_="val_left")]
 
     if not matches:
         logging.error("Unable to find any matches!")
@@ -209,6 +228,17 @@ def scrape_matches(tab, webauth):
                 "match_score": "",
             }
 
+        # time is given in the format "2024-07-10 01:57:06 GMT" and converted to a datetime object
+        # this allows us to compare the match time to the current time, and skip matches that are too recent.
+        logging.debug(f"Match date: {match_info['date']}")
+        match_date = datetime.strptime(match_info["date"], "%Y-%m-%d %H:%M:%S %Z")
+        match_date = match_date.replace(tzinfo=timezone.utc)
+        current_time = datetime.now(timezone.utc)
+        thirty_minutes_ago = current_time - timedelta(minutes=30)
+        if thirty_minutes_ago <= match_date <= current_time:
+            logging.info("Match too recent, skipping...")
+            continue
+
         # player_info process
         player_table = match.find("table", class_="csgo_scoreboard_inner_right").find(
             "tbody"
@@ -222,9 +252,9 @@ def scrape_matches(tab, webauth):
                 "match_info": match_info,
                 "players_info": players_info,
             }
-            logging.info(f"Match recorded: {match_entry}")
+            logging.debug(f"Match recorded: {match_entry}")
             recent_matches.append(match_entry)
 
     logging.info(f"Page Scrape complete.")
 
-    return recent_matches, tab
+    return recent_matches
