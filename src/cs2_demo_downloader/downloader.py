@@ -86,12 +86,12 @@ def download_file(session, url, metadata, destination_folder):
             unit="B",
             unit_scale=True,
             unit_divisor=1024,
-        ) as bar,
+        ) as download_bar,
     ):
         for chunk in response.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
-                bar.update(len(chunk))
+                download_bar.update(len(chunk))
 
     entry = {
         "url": url,
