@@ -17,7 +17,7 @@ configuration is done through a settings.toml file automatically generated at fi
 
 ## Installation
 
-Clone the repository and install the package using the `python -m pip install .` command to install, or use a virtual envionment by running
+Clone the repository and install the package using the `pip install -e .` command to install, or use a virtual envionment by running
 
 ```bash
 python -m venv .venv
