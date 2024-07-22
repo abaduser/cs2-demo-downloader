@@ -228,8 +228,8 @@ def scrape_matches(tab, webauth):
                 "match_score": "",
             }
 
-        # ex
-        # 2024-07-10 01:57:06 GMT
+        # time is given in the format "2024-07-10 01:57:06 GMT" and converted to a datetime object
+        # this allows us to compare the match time to the current time, and skip matches that are too recent.
         logging.debug(f"Match date: {match_info['date']}")
         match_date = datetime.strptime(match_info["date"], "%Y-%m-%d %H:%M:%S %Z")
         match_date = match_date.replace(tzinfo=timezone.utc)
