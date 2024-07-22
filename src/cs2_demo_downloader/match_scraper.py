@@ -98,9 +98,10 @@ def goto_personal_data(page, url):
     return True
 
 
-def match_table_empty(page):
+def check_for_match_table(page):
     table_locator = page.locator("table.generic_kv_table.csgo_scoreboard_root tbody tr")
     row_count = table_locator.count()
+    # determine if the table is empty or only contains an empty header row.
     if row_count == 0 or (
         row_count == 1 and table_locator.first.locator("th").count() > 0
     ):
@@ -114,7 +115,7 @@ def match_table_empty(page):
 def fetch_match_table(page):
     # logic for checking if theres a load more button as the only item
     # while we find no match elements on the page, click load more.
-    while match_table_empty(page):
+    while check_for_match_table(page):
         page.locator("#load_more_clickable").click()
     for _ in range(4):
         page.locator("#load_more_clickable").click()
