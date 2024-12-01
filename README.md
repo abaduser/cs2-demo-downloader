@@ -1,6 +1,8 @@
 # cs2-demo-downloader
 
-cs2 demo downloader is a tool written in Python to help with downloading your cs2 demos, and organize them. valve only stores demos for about a week or two on their servers, this tool helps you by automatically scrapping all your most recent demos, periodically. Demos can then be sorted and filtered for packing and sending to friends.
+cs2 demo downloader is a tool written in Python to help with downloading your cs2 demos, and organize them.
+
+Valve only stores demos for about a week or two on their servers, this tool helps you by automatically scrapping all your most recent demos, periodically. Demos can then be sorted and filtered for packing and sending to friends.
 
 This project is currently a WIP
 
